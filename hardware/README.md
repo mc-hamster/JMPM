@@ -4,4 +4,4 @@ JMPM 001
 
   Known issues:
   
-    None!
+    Ground Plane Isolate is 24mil. Next version should use 16mil.
