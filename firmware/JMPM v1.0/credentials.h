@@ -1,0 +1,2 @@
+#define mySSID "YOUR_WIFI"
+#define myPASSWORD "WIFI_PASSWORD"
