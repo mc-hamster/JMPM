@@ -102,6 +102,7 @@ int16_t currentRSSI;
 uint32_t lastMillis = 0;
 
 void TaskWeb( void *pvParameters );
+void TaskWifi( void *pvParameters );
 
 void setup(void) {
   // DO NOT REMOVE THIS! It gives the serial port some time to accept a firmware update.
@@ -113,7 +114,7 @@ void setup(void) {
   bootSalt = random(2147483647);
 
   Serial.println("");
-  Serial.println("JMIM v0.11");
+  Serial.println("JMIM v1.0");
 
 
   //  adc1_config_channel_atten(ADC1_CHANNEL_0, ADC_ATTEN_DB_11);
@@ -197,7 +198,7 @@ void setup(void) {
   Serial.println(WiFi.localIP());
   Serial.print("  Subnet Mas: ");
   Serial.println(WiFi.subnetMask());
-  Serial.print("  Gateway address:re ");
+  Serial.print("  Gateway address ");
   Serial.println(WiFi.gatewayIP());
   Serial.print("  Device MAC Address: ");
   Serial.println(WiFi.macAddress());
@@ -229,7 +230,7 @@ void setup(void) {
     ,  "TaskWeb"   // A name just for humans
     ,  2048  // This stack size can be checked & adjusted by reading the Stack Highwater
     ,  NULL
-    ,  2  // Priority, with 3 (configMAX_PRIORITIES - 1) being the highest, and 0 being the lowest.
+    ,  1  // Priority, with 3 (configMAX_PRIORITIES - 1) being the highest, and 0 being the lowest.
     ,  NULL
     ,  ARDUINO_RUNNING_CORE);
 
@@ -311,9 +312,9 @@ void loop(void) {
 
     lastMillis = millis();
   }
-
   // Check that WiFi is connected. If not, reconnect.
   reconnectWiFi();
+
 }
 
 
