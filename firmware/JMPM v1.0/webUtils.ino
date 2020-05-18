@@ -17,10 +17,7 @@ void drawGraph() {
   server.send(200, "image/svg+xml", out);
 }
 
-void handleStrip() {
-
-
-
+void handleRoot() {
 
 
   String out = "";
@@ -29,7 +26,6 @@ void handleStrip() {
   out += "<title>JMPM v0.001</title>";
   out += "</head>";
   out += "<body>";
-  out += "<form>\n";
 
   out += "<a href=/json/current/live>JSON - Live Data</a><br>\n";
   out += "<a href=/json/current/history>JSON - Historical Data</a><br>\n";
@@ -37,10 +33,26 @@ void handleStrip() {
   out += "<br>\n";
   out += "<br>\n";
   out += "<br>\n";
+  out += "<form action=/json/current/calibrate>\n";
+  out += "Calibrate Sensors (35A = 29.40; 12A = 103.40)<br>\n";
+  out += "<select id=current name=current>\n";
+  out += "  <option value=1>1</option>\n";
+  out += "  <option value=2>2</option>\n";
+  out += "  <option value=3>3</option>\n";
+  out += "  <option value=4>4</option>\n";
+  out += "  <option value=5>5</option>\n";
+  out += "</select>\n";
+  out += "<input type=text id=value name=value>\n";
+  out += "<input type=submit value=Submit>\n";
+  out += "</form>\n";
+  out += "<br>\n";
+  out += "<br>\n";
+  out += "<br>\n";
+  out += "<br>\n";
   out += "<a href=/json/stats>JSON - Stats</a><br>\n";
+  out += "<a href=/clearPreferences>Clear Preferences</a><br>\n";
   out += "<a href=/reboot>Reboot Device</a><br>\n";
 
-  out += "</form>\n";
   out += "</body>";
 
   server.send(200, "text/html", out);
@@ -77,7 +89,7 @@ void handleReturnJSON_Current_History() {
   out += "{\n";
   out += "  \"data\" : {\n";
   out += "    \"salt\" : " + String(bootSalt) + ",\n";
-  out += "    \"saveEverySeconds\" : " + String(historyFrequency) + ",\n";  
+  out += "    \"saveEverySeconds\" : " + String(historyFrequency) + ",\n";
   out += "    \"currents\" : [\n";
 
 
@@ -113,13 +125,69 @@ void handleReturnJSON_Current_History() {
 
 }
 
-void handleReturnJSON_stats() {
+void handleReturnJSON_Current_Calibrate() {
+
+  String paramCurrent = server.arg("current");
+  String paramValue = server.arg("value");
+
+  if (server.hasArg("current") == true && server.hasArg("value") == true) {
+    if (paramCurrent.toInt() == 1) {
+      Serial.println("b");
+      calibration_1 = paramValue.toDouble();
+      preferences.putDouble("calibration_1", calibration_1);
+    } else if (paramCurrent.toInt() == 2) {
+      calibration_2 = paramValue.toDouble();
+      preferences.putDouble("calibration_2", calibration_2);
+
+    } else if (paramCurrent.toInt() == 3) {
+      calibration_3 = paramValue.toDouble();
+      preferences.putDouble("calibration_3", calibration_3);
+
+    } else if (paramCurrent.toInt() == 4) {
+      calibration_4 = paramValue.toDouble();
+      preferences.putDouble("calibration_4", calibration_4);
+
+    } else if (paramCurrent.toInt() == 5) {
+      calibration_5 = paramValue.toDouble();
+      preferences.putDouble("calibration_5", calibration_5);
+
+    }
+  }
+
   String out = "";
   out += "{\n";
   out += "  \"data\" : {\n";
+  out += "    \"calibration_1\" : " + String(calibration_1) + "\n";
+  out += "    \"calibration_2\" : " + String(calibration_2) + "\n";
+  out += "    \"calibration_3\" : " + String(calibration_3) + "\n";
+  out += "    \"calibration_4\" : " + String(calibration_4) + "\n";
+  out += "    \"calibration_5\" : " + String(calibration_5) + "\n";
+  out += "  }\n";
+  out += "}\n";
+
+  server.send ( 200, "application/json", out );
+  return;
+
+}
+
+void handleReturnJSON_stats() {
+  uint32_t upTime = millis();
+
+  String out = "";
+  out += "{\n";
+  out += "  \"data\" : {\n";
+  out += "    \"calibration_1\" : " + String(calibration_1) + "\n";
+  out += "    \"calibration_2\" : " + String(calibration_2) + "\n";
+  out += "    \"calibration_3\" : " + String(calibration_3) + "\n";
+  out += "    \"calibration_4\" : " + String(calibration_4) + "\n";
+  out += "    \"calibration_5\" : " + String(calibration_5) + "\n";
+  out += "    \"upTime\" : " + String(upTime) + "\n";
+  out += "    \"upTimeSec\" : " + String(upTime / 1000) + "\n";
+  out += "    \"upTimeMin\" : " + String(upTime / 1000 / 60) + "\n";
+  out += "    \"rssi\" : " + String(currentRSSI) + "\n";
   out += "    \"rebootCounter\" : " + String(rebootCounter) + ",\n";
   out += "    \"salt\" : " + String(bootSalt) + ",\n";
-  out += "    \"saveEverySeconds\" : " + String(historyFrequency) + ",\n";  
+  out += "    \"saveEverySeconds\" : " + String(historyFrequency) + ",\n";
   out += "    \"wifiReconnectCount\" : " + String(reconnectCount) + ",\n";
   out += "    \"rssi\" : " + String(currentRSSI) + "\n";
   out += "  }\n";

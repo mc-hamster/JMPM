@@ -33,6 +33,7 @@
 #include <WiFiClient.h>
 #include <WebServer.h>
 #include "esp_wifi.h"
+#include "time.h"
 
 #include <ArduinoOTA.h>
 #include <Preferences.h>
@@ -102,21 +103,41 @@ int16_t currentRSSI;
 uint32_t lastMillis = 0;
 
 void TaskWeb( void *pvParameters );
-void TaskWifi( void *pvParameters );
+void TaskWifiWatch( void *pvParameters );
+
+double calibration_1 = 0;
+double calibration_2 = 0;
+double calibration_3 = 0;
+double calibration_4 = 0;
+double calibration_5 = 0;
+
 
 void setup(void) {
+
+  // Initialize our array of arrays that hold the sensor data.
+  for (uint8_t sensor = 0; sensor < number_of_current_sensors; sensor++) {
+    for (int thisReading = 0; thisReading < numReadings; thisReading++) {
+      currentSensorReadings[sensor][thisReading] = 0;
+    }
+  }
+
   // DO NOT REMOVE THIS! It gives the serial port some time to accept a firmware update.
   delay(100);
 
   Serial.begin(115200);
 
-  randomSeed(analogRead(Pin_Current_1) * analogRead(Pin_Current_2) * analogRead(Pin_Current_3) * analogRead(Pin_Current_4)  * analogRead(Pin_Current_5) );
-  bootSalt = random(2147483647);
-
   Serial.println("");
   Serial.println("JMIM v1.0");
 
+  Serial.println("Generating random seed");
+  randomSeed(analogRead(Pin_Current_1) * analogRead(Pin_Current_2) * analogRead(Pin_Current_3) * analogRead(Pin_Current_4)  * analogRead(Pin_Current_5) );
+  bootSalt = random(2147483647);
+  Serial.println("Generating random seed - Done");
 
+  // ------------------------------------------
+
+
+  Serial.println("Configuring ADC");
   //  adc1_config_channel_atten(ADC1_CHANNEL_0, ADC_ATTEN_DB_11);
   analogReadResolution(ADC_BITS); // Configure ADC to 12bit reads
   analogSetCycles(16);
@@ -129,22 +150,7 @@ void setup(void) {
   pinMode(Pin_Current_3, INPUT);
   pinMode(Pin_Current_4, INPUT);
   pinMode(Pin_Current_5, INPUT);
-
-  // Initialize our array of arrays that hold the sensor data.
-  for (uint8_t sensor = 0; sensor < number_of_current_sensors; sensor++) {
-    for (int thisReading = 0; thisReading < numReadings; thisReading++) {
-      currentSensorReadings[sensor][thisReading] = 0;
-    }
-  }
-
-  // Calibration ... 35A scale = (2000 turns / 68ohm burden) = 29.4
-  // Calibration ... 120A scale = (2000 turns / 19.33ohm burden) = 103.4
-  float calibration = 29.4;
-  emon1.current(Pin_Current_1, calibration);             // Current: input pin, calibration.
-  emon2.current(Pin_Current_2, calibration);             // Current: input pin, calibration.
-  emon3.current(Pin_Current_3, calibration);             // Current: input pin, calibration.
-  emon4.current(Pin_Current_4, calibration);             // Current: input pin, calibration.
-  emon5.current(Pin_Current_5, calibration);             // Current: input pin, calibration.
+  Serial.println("Configuring ADC - Done");
 
   // ------------------------------------------
 
@@ -155,12 +161,27 @@ void setup(void) {
   // Note: Namespace name is limited to 15 chars.
   rebootCounter = preferences.getUInt("rebootCounter", 0);
 
+  // Calibration ... 35A scale = (2000 turns / 68ohm burden) = 29.4
+  // Calibration ... 120A scale = (2000 turns / 19.33ohm burden) = 103.4
+  calibration_1 = preferences.getDouble("calibration_1", 29.4);
+  calibration_2 = preferences.getDouble("calibration_2", 29.4);
+  calibration_3 = preferences.getDouble("calibration_3", 29.4);
+  calibration_4 = preferences.getDouble("calibration_4", 29.4);
+  calibration_5 = preferences.getDouble("calibration_5", 29.4);
+
   rebootCounter++;
   preferences.putUInt("rebootCounter", rebootCounter);
 
   Serial.println("Setup Preferences (Flash Storage) - Done");
 
   // ------------------------------------------
+  Serial.println("Calibrating current sensors");
+  emon1.current(Pin_Current_1, calibration_1);             // Current: input pin, calibration.
+  emon2.current(Pin_Current_2, calibration_2);             // Current: input pin, calibration.
+  emon3.current(Pin_Current_3, calibration_3);             // Current: input pin, calibration.
+  emon4.current(Pin_Current_4, calibration_4);             // Current: input pin, calibration.
+  emon5.current(Pin_Current_5, calibration_5);             // Current: input pin, calibration.
+  Serial.println("Calibrating current sensors - Done");
 
   // ------------------------------------------
 
@@ -205,16 +226,17 @@ void setup(void) {
   Serial.print("  RSSI: ");
   Serial.println(WiFi.RSSI());
   Serial.println("Connecting to WiFi - Done");
+  // ------------------------------------------
 
   /*
      Handlers for HTTP Server
   */
   Serial.println("HTTP server Configuration...");
-  server.on("/", handleStrip);
+  server.on("/", handleRoot);
   server.on("/json/stats", handleReturnJSON_stats);
   server.on("/json/current/live", handleReturnJSON_Current_Live);
   server.on("/json/current/history", handleReturnJSON_Current_History);
-  server.on("/strip", handleStrip);
+  server.on("/json/current/calibrate", handleReturnJSON_Current_Calibrate);
   server.on("/clearPreferences", handleClearPreferences);
   server.on("/reboot", handleReboot);
   server.on("/inline", []() {
@@ -224,15 +246,21 @@ void setup(void) {
   server.begin();
   Serial.println("HTTP server started!");
 
+  // ------------------------------------------
+
+  Serial.println("Creating FreeRTOS Tasks");
   // Now set up two tasks to run independently.
   xTaskCreatePinnedToCore(
     TaskWeb
     ,  "TaskWeb"   // A name just for humans
-    ,  2048  // This stack size can be checked & adjusted by reading the Stack Highwater
+    ,  4096  // This stack size can be checked & adjusted by reading the Stack Highwater
     ,  NULL
     ,  1  // Priority, with 3 (configMAX_PRIORITIES - 1) being the highest, and 0 being the lowest.
     ,  NULL
     ,  ARDUINO_RUNNING_CORE);
+  Serial.println("....");
+
+  Serial.println("Creating FreeRTOS Tasks - Done");
 
   // ------------------------------------------
 
@@ -247,7 +275,6 @@ void setup(void) {
 
 
 void loop(void) {
-
   uint32_t samples = 740;
 
   currentSensorReadings[0][readIndex] = emon1.calcIrms(samples);  // Calculate Irms only
