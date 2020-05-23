@@ -1,3 +1,11 @@
+/* Style */
+String style =
+  "<style>#file-input,input{width:100%;height:44px;border-radius:4px;margin:10px auto;font-size:15px}"
+  "input{background:#f1f1f1;border:0;padding:0 15px}body{background:#3498db;font-family:sans-serif;font-size:14px;color:#777}"
+  "#file-input{padding:0;border:1px solid #ddd;line-height:44px;text-align:left;display:block;cursor:pointer}"
+  "#bar,#prgbar{background-color:#f1f1f1;border-radius:10px}#bar{background-color:#3498db;width:0%;height:10px}"
+  "form{background:#fff;max-width:258px;margin:75px auto;padding:30px;border-radius:5px;text-align:center}"
+  ".btn{background:#3498db;color:#fff;cursor:pointer}</style>";
 
 void drawGraph() {
   String out = "";
@@ -34,7 +42,7 @@ void handleRoot() {
   out += "<br>\n";
   out += "<br>\n";
   out += "<form action=/json/current/calibrate>\n";
-  out += "Calibrate Sensors (35A = 29.40; 12A = 103.40)<br>\n";
+  out += "Calibrate Sensors<br>(35A = 29.40; 120A = 103.40)<br>\n";
   out += "<select id=current name=current>\n";
   out += "  <option value=1>1</option>\n";
   out += "  <option value=2>2</option>\n";
@@ -42,7 +50,7 @@ void handleRoot() {
   out += "  <option value=4>4</option>\n";
   out += "  <option value=5>5</option>\n";
   out += "</select>\n";
-  out += "<input type=text id=value name=value>\n";
+  out += "Value <input type=text id=value name=value>\n";
   out += "<input type=submit value=Submit>\n";
   out += "</form>\n";
   out += "<br>\n";
@@ -51,8 +59,9 @@ void handleRoot() {
   out += "<br>\n";
   out += "<a href=/json/stats>JSON - Stats</a><br>\n";
   out += "<a href=/clearPreferences>Clear Preferences</a><br>\n";
+  out += "<a href=/update/form>Firmware Update</a><br>\n";
   out += "<a href=/reboot>Reboot Device</a><br>\n";
-
+  //out += style;
   out += "</body>";
 
   server.send(200, "text/html", out);
@@ -230,6 +239,58 @@ void handleReboot() {
   preferences.end();
   ESP.restart();
 
+  return;
+
+}
+
+
+void handleOtaIndex() {
+  /* Server Index Page */
+  String updateIndex =
+    "<script src='https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js'></script>"
+    "<form method='POST' action='#' enctype='multipart/form-data' id='upload_form'>"
+    "<input type='file' name='update' id='file' onchange='sub(this)' style=display:none>"
+    "<label id='file-input' for='file'>   Choose file...</label>"
+    "<input type='submit' class=btn value='Update'>"
+    "<br><br>"
+    "<div id='prg'></div>"
+    "<br><div id='prgbar'><div id='bar'></div></div><br></form>"
+    "<script>"
+    "function sub(obj){"
+    "var fileName = obj.value.split('\\\\');"
+    "document.getElementById('file-input').innerHTML = '   '+ fileName[fileName.length-1];"
+    "};"
+    "$('form').submit(function(e){"
+    "e.preventDefault();"
+    "var form = $('#upload_form')[0];"
+    "var data = new FormData(form);"
+    "$.ajax({"
+    "url: '/update',"
+    "type: 'POST',"
+    "data: data,"
+    "contentType: false,"
+    "processData:false,"
+    "xhr: function() {"
+    "var xhr = new window.XMLHttpRequest();"
+    "xhr.upload.addEventListener('progress', function(evt) {"
+    "if (evt.lengthComputable) {"
+    "var per = evt.loaded / evt.total;"
+    "$('#prg').html('progress: ' + Math.round(per*100) + '%');"
+    "$('#bar').css('width',Math.round(per*100) + '%');"
+    "}"
+    "}, false);"
+    "return xhr;"
+    "},"
+    "success:function(d, s) {"
+    "console.log('success!') "
+    "},"
+    "error: function (a, b, c) {"
+    "}"
+    "});"
+    "});"
+    "</script>" + style;
+
+  server.send ( 200, "text/html", updateIndex );
   return;
 
 }
