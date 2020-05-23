@@ -27,6 +27,12 @@ void drawGraph() {
 
 void handleRoot() {
 
+  /*
+     There's a bug in version 1.04 of the ESP Board Library for authentication in Safari.
+  */
+  if (!server.authenticate(www_username, www_password)) {
+    return server.requestAuthentication(DIGEST_AUTH, www_realm, authFailResponse);
+  }
 
   String out = "";
   out += "<head>\n";
@@ -136,6 +142,11 @@ void handleReturnJSON_Current_History() {
 
 void handleReturnJSON_Current_Calibrate() {
 
+  if (!server.authenticate(www_username, www_password)) {
+    return server.requestAuthentication(DIGEST_AUTH, www_realm, authFailResponse);
+  }
+
+
   String paramCurrent = server.arg("current");
   String paramValue = server.arg("value");
 
@@ -210,6 +221,11 @@ void handleReturnJSON_stats() {
 
 void handleClearPreferences() {
 
+  if (!server.authenticate(www_username, www_password)) {
+    return server.requestAuthentication(DIGEST_AUTH, www_realm, authFailResponse);
+  }
+
+
   String out = "";
   out += "<meta http-equiv=refresh content=\"2; url=/\">";
   out += "Preferences Cleared. Rebooting.";
@@ -229,6 +245,11 @@ void handleClearPreferences() {
 
 void handleReboot() {
 
+  if (!server.authenticate(www_username, www_password)) {
+    return server.requestAuthentication(DIGEST_AUTH, www_realm, authFailResponse);
+  }
+
+
   String out = "";
   out += "<meta http-equiv=refresh content=\"3; url=/\">";
   out += "Rebooting ... Will <a href=/>redirect</a> in 3 seconds ...";
@@ -245,6 +266,11 @@ void handleReboot() {
 
 
 void handleOtaIndex() {
+  if (!server.authenticate(www_username, www_password)) {
+    return server.requestAuthentication(DIGEST_AUTH, www_realm, authFailResponse);
+  }
+
+  
   /* Server Index Page */
   String updateIndex =
     "<script src='https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js'></script>"

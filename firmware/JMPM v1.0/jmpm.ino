@@ -81,6 +81,13 @@ Preferences preferences;
 const char *ssid = mySSID;
 const char *password = myPASSWORD;
 
+const char* www_username = "admin";
+const char* www_password = "admin";
+// allows you to set the realm of authentication Default:"Login Required"
+const char* www_realm = "Custom Auth Realm";
+// the Content of the HTML response in case of Unautherized Access Default:empty
+String authFailResponse = "Authentication Failed";
+
 
 WebServer server(80);
 
