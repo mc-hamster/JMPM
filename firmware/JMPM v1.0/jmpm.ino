@@ -12,7 +12,7 @@
      list of conditions and the following disclaimer in the documentation and/or
      other materials provided with the distribution.
 
- * * Neither the name of Majenko Technologies nor the names of its
+ * * Neither the name of Jm Casler nor the names of its
      contributors may be used to endorse or promote products derived from
      this software without specific prior written permission.
 
@@ -35,6 +35,7 @@
 #include "esp_wifi.h"
 #include "time.h"
 #include <Update.h>
+#include <HTTPClient.h>
 
 #include <Preferences.h>
 #include "EmonLib.h"                   // Include Emon Library
@@ -81,8 +82,8 @@ Preferences preferences;
 const char *ssid = mySSID;
 const char *password = myPASSWORD;
 
-const char* www_username = "admin";
-const char* www_password = "admin";
+const char* www_username = mySSID;
+const char* www_password = myPASSWORD;
 // allows you to set the realm of authentication Default:"Login Required"
 const char* www_realm = "Custom Auth Realm";
 // the Content of the HTML response in case of Unautherized Access Default:empty
@@ -110,6 +111,7 @@ int16_t currentRSSI;
 uint32_t lastMillis = 0;
 
 void TaskWeb( void *pvParameters );
+void TaskEmoncms( void *pvParameters );
 void TaskWifiWatch( void *pvParameters );
 
 double calibration_1 = 0;
@@ -285,7 +287,6 @@ void setup(void) {
   // ------------------------------------------
 
   Serial.println("Creating FreeRTOS Tasks");
-  // Now set up two tasks to run independently.
   xTaskCreatePinnedToCore(
     TaskWeb
     ,  "TaskWeb"   // A name just for humans
@@ -294,6 +295,16 @@ void setup(void) {
     ,  1  // Priority, with 3 (configMAX_PRIORITIES - 1) being the highest, and 0 being the lowest.
     ,  NULL
     ,  ARDUINO_RUNNING_CORE);
+
+    xTaskCreatePinnedToCore(
+    TaskEmoncms
+    ,  "TaskEmoncms"   // A name just for humans
+    ,  4096  // This stack size can be checked & adjusted by reading the Stack Highwater
+    ,  NULL
+    ,  1  // Priority, with 3 (configMAX_PRIORITIES - 1) being the highest, and 0 being the lowest.
+    ,  NULL
+    ,  ARDUINO_RUNNING_CORE);
+
   Serial.println("....");
 
   Serial.println("Creating FreeRTOS Tasks - Done");
